@@ -1,0 +1,49 @@
+Sample Workflow for Sitagliptin / Metformin
+=================================================
+
+To generate an R script with this code:
+
+```r
+knitr::purl("sample_workflow.Rmd", "sample_workflow.R")
+```
+
+
+```r
+library(magrittr)
+library(RMySQL)
+library(dplyr)
+library(stringr)
+library(edgeR)
+library(sitt)
+
+T0 <- "None"
+T1 <- "Pioglitazone"
+T2 <- "Metformin"
+T12 <- "Pioglitazone / Metformin"
+
+# enumerate theoretical outcome vectors
+th_vectors <- outcomeVectorsByMode()
+
+# connect to database
+CON <- dbConnect(MySQL(), user = "eld", password = '5thStreet',
+                 dbname = 'eld_v4')
+
+# metadata --------------------------------------------------------------------
+combo_exists <- sitt::isValidCombination(T1, T2,
+                                         DRUG_COMBINATION = TRUE)
+metadata <- getInteraction(CON, T1, T2,
+                           T12, "EC") %>%
+  sitt::filterMetadata(conc = "Mid", sex = "M", cell.type = "EC")
+metadata <- getVehicles(CON, "EC", metadata)
+
+counts <- getExpectedCounts(CON, metadata, level = "gene")
+genes <- getGeneMetadata(CON, counts, level = "gene")
+counts <- asCountsMatrix(counts)
+
+interaction <- edgeRModeClassifier(counts, genes, metadata,
+                                   DRUG_COMBINATION = TRUE,
+                                   alpha = 0.05)
+
+go_data <- getGOTermsForAllModes(interaction$voom,
+                                 interaction$interaction.tbl)
+```

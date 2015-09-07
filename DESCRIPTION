@@ -1,0 +1,22 @@
+Package: sitt
+Type: Package
+Title: Classification of interaction modes and classes discussed in
+Version: 1.0.1
+Date: 2015-08-10
+Authors@R: person("Justin", "Taylor", role = c("aut", "cre"),
+                  email = "taylor@hemoshear.com")
+Author: Justin Taylor, with contributions from Aaron Mackey, Steve Hoang, Mark Lawson and Fitz Elliott
+Maintainer: Justin Taylor <taylor@hemoshear.com>
+Description: sitt provides functions for classifying gene interaction profiles
+             into mathematically and biologically defined interaction modes and classes,
+             extending the homogenous classes of positive and negative synergies into
+             heterogenous classes comprised of defined interaction modes. This package
+             currently supports transformation of RNA-seq data (expected counts)
+             retrieved from the HemoShear Therapeutics eld_v4 database.
+License: Property of HemoShear Therapeutics
+Imports: ggplot2, RMySQL, limma, edgeR, rmarkdown, dplyr, devtools,
+        gtools, GGally, stringr, magrittr, topGO, caret
+Suggests: knitr
+VignetteBuilder: knitr
+LazyData: true
+Packaged: 2015-08-28 18:35:52 UTC; taylor
