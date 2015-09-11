@@ -1,0 +1,207 @@
+## Interaction Class & Mode Classification Implementation
+========================================================
+
+
+The algorithm first checks to see if an outcome vector is consistent with 1/5 no-interaction vectors. First, the 4/5 additive vectors are tried. Then, the algorithm checks to see if the vector is a null outcome vector. Before going on to check if the outcome vector can be matched to a positive/negative interaction class/mode, the vector is checked to see if it was enumerated as 1/75 theoretical outcome vectors. If the vector was not enumerated, then the outcome vector is classified as anomalous ("A").
+
+At this point, we know that our vector was enumerated theoretically and is consistent with some positive or negative interaction. If the outcome vector in question makes it this far in the decision tree, we need to classify the interaction's *class*. Some vectors can exhibit modes in the positive class or negative class. Thus, the class of an interaction must be determined before mode classification. If the class is not determined before mode classification, then the outcome vector could be defined by two modes but will only be labeled as the mode that is highest in the decision tree.
+
+To classify an interaction's class, we will use the log-fold changes calculated with limma or the log-fold changes calculated with likelihood ratio tests in the case of the `edgeR` pipeline. In the case of the `edgeR` pipeline, if the fold-change of XY =/= X + Y, then the interaction is classified into a class. The same is done for limma, except a vector of four values must be passed to the `getIntClass` function for the four coefficients denoting the conditions of the experiment.
+
+```{r}
+#' get character string classification for interaction class
+#'
+#' @param logfc Numeric vector of log fold changes or character vector indicating interaction mode
+#' @param pipeline Character vector ("limma" or "edgeR")
+#' @return The interaction class of \code{logfc}
+#' @examples
+#' logfc <- c(1.0, 1.5, 2.2)
+#' getIntClass(logfc, pipeline = "edgeR")
+#' logfc <- "High.Stab"
+#' getIntClass(logfc)
+getIntClass <- function(logfc, pipeline = "limma") {
+  # logfc is a vector where each element is a log fold change for a comparison or condition
+  if (is.numeric(logfc)) {
+    if (pipeline == "edgeR") {
+      if (logfc[3] > (logfc[2] + logfc[1])) {
+        return("Positive")
+      }
+      if (logfc[3] < (logfc[2] + logfc[1])) {
+        return("Negative")
+      }
+      else {
+        return("L")
+      }
+    }
+
+    if (pipeline == "limma") {
+      if (logfc[4] > (logfc[2] + logfc[3] - logfc[1])) {
+        return("Positive")
+      }
+      if (logfc[4] < (logfc[2] + logfc[3] - logfc[1])) {
+        return("Negative")
+      }
+      else {
+        return("L")
+      }
+    }
+
+  }
+  # logfc is actually a character string indicating a mode
+  if (is.character(logfc)) {
+    findClass <- function(m) {
+      if (m %in% c("Emer.Pos.Syn", "Low.Stab", "X.Restores.Y", "Y.Restores.X",
+                 "Pos.Syn", "Pos")) {
+      return("Positive")
+    }
+
+    if (m %in% c("Emer.Neg.Syn", "High.Stab", "X.Inhibits.Y", "Y.Inhibits.X",
+                 "Neg.Syn", "Neg")) {
+      return("Negative")
+    }
+
+    if (m %in% c("Sym.Right", "Sym.Left", "Step.Up", "Step.Down")) {
+      return("No.Interaction")
+    }
+
+    else {
+      return("NI")
+    }
+  }
+
+  if (length(logfc) == 1) {
+    findClass(logfc)
+  }
+  else {
+    sapply(modes, findClass)
+  }
+}
+  else {
+    return(NaN)
+  }
+}
+```
+
+Once an interaction is assigned an interaction class, then we can map the outcome vector to an interaction mode in that particular interaction class, since the outcome vectors associated with modes in a particular class are mutually exclusive (unlike outcome vectors associated with modes in both interaction classes).
+
+
+[VERY WEAK POINT]
+Despite, some interactions will fall into a class, but not an interaction mode in that class. Since we are just using the log-fold changes to classify the interaction classes, one might think that these interactions are actually closer to being non-interactions than anything else. At any rate, they will be labeled as anomalies and can be classified with k-nearest neighbors.
+
+The final decision tree was visualized with the diagram below:
+
+
+
+              Outcome Vector
+                   /\
+                  /  \
+                 /    \
+                /      \
+              NI    Interaction Present
+                       /\
+                      /  \
+                     /    \
+                    /      \
+                Anomaly   Enumerated Vector
+                           /\
+                          /  \
+                         /    \     <------------------- Log Fold Changes
+                        /      \
+              Positive Class  Negative Class
+                 /\                   /\
+                /  \                 /  \
+               /    \               /    \ ------------> Log Fold Changes
+              /      \             /      \
+             /        \           /        \
+          Positive    UC     Negative      UC
+            Mode                  Mode
+##### Decision Tree for Interaction Mode Classification
+
+
+`classifyByThOutcomeVector` accepts two arguments, `ov_logfc` and `pipeline`. `ov_logfc` is a vector where the integers 1:6 are the elements of the coded outcome vector, and the doubles 7:n are the log fold-changes associated with the vector. `pipeline` is a character vector of length 1 that explicitly states what pipeline is being used for classification (`"limma"`, `"edgeR"`).
+```{r, eval=FALSE}
+# classify by theoretical outcome vector ------------------------------------
+classifyByThOutcomeVector <- function(ov_logfc, pipeline = "limma") {
+
+  ov <- ov_logfc[1:6]
+  logfc <- ov_logfc[7:length(ov_logfc)]
+
+  if (isMode(ov, sym_left)) {
+    return("Sym.Left")
+  }
+
+  if (isMode(ov, sym_right)) {
+    return("Sym.Right")
+  }
+
+  if (isMode(ov, step_down)) {
+    return("Step.Down")
+  }
+
+  if (isMode(ov, step_up)) {
+    return("Step.Up")
+  }
+
+  # no-interaction outcome vector
+  if (isNi(ov)) {
+    return("NI")
+  }
+  # anomalous outcome vector
+  if (isAnomaly(ov)) {
+    return("UC")
+  }
+
+  # Negative Interaction, XY < X + Y ------------------------------------------
+  if(getIntClass(logfc, pipeline) == "Negative") {
+
+    if (isMode(ov, high_stab)) {
+      return("High.Stab")
+    }
+    if (isMode(ov, x_inhibits_y)) {
+      return("X.Inhibits.Y")
+    }
+    if (isMode(ov, y_inhibits_x)) {
+      return("Y.Inhibits.X")
+    }
+    if (isMode(ov, neg_syn)) {
+      return("Neg.Syn")
+    }
+    if (isMode(ov, emer_neg_syn)) {
+      return("Emer.Neg.Syn")
+    }
+    else {
+      return("UC")
+    }
+  }
+
+  # Positive Interaction, XY > X + Y ------------------------------------------
+  if(getIntClass(logfc, pipeline) == "Positive") {
+    if (isMode(ov, low_stab)) {
+      return("Low.Stab")
+    }
+    if (isMode(ov, x_restores_y)) {
+      return("X.Restores.Y")
+    }
+    if (isMode(ov, y_restores_x)) {
+      return("Y.Restores.X")
+    }
+    if (isMode(ov, pos_syn)) {
+      return("Pos.Syn")
+    }
+    if (isMode(ov, emer_pos_syn)) {
+      return("Emer.Pos.Syn")
+    }
+    else {
+      return("A")
+    }
+  }
+
+  else {
+    return("NI")
+  }
+}
+```
+
+```{r}
+sessionInfo()
+```

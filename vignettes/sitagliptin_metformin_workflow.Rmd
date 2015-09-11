@@ -1,0 +1,64 @@
+Sitagliptin + Metformin Example Workflow
+========================================================
+
+```{r, eval = FALSE}
+# signal_interactions
+lapply(dbListConnections(MySQL()), dbDisconnect)
+library(magrittr)
+library(RMySQL)
+library(dplyr)
+library(stringr)
+library(edgeR)
+library(sitt)
+library(topGO)
+set.seed(252)
+
+T0 <- "None"
+T1 <- "Sitagliptin"
+T2 <- "Metformin"
+T12 <- "Sitagliptin / Metformin"
+cell_type <- "EC"
+alpha <- 0.01
+
+th_vectors <- outcomeVectorsByMode()
+# connect to database
+CON <- dbConnect(MySQL(), ...)
+# metadata --------------------------------------------------------------------
+combo_exists <- isValidCombination(T1, T2,
+                                   DRUG_COMBINATION = TRUE)
+metadata <- getInteraction(CON, T1, T2,
+                           T12, cell_type) %>%
+  filterMetadata(conc = "Mid", sex = "M", cell.type = cell_type)
+metadata <- getVehicles(CON, cell_type, metadata)
+print(metadata)
+# counts
+counts <- sitt::getExpectedCounts(CON, metadata, level = "gene")
+
+
+genes <- getGeneMetadata(CON, counts, level = "gene")
+counts <- asCountsMatrix(counts)
+interaction <- edgeRModeClassifier(counts, genes, metadata,
+                                   DRUG_COMBINATION = TRUE,
+                                   alpha = alpha)
+counts <- counts[,sample(ncol(counts))]
+interaction_null <- edgeRModeClassifier(counts, genes, metadata,
+                                        DRUG_COMBINATION = TRUE,
+                                        alpha = alpha)
+go_data <- getGOTermsForAllModes(interaction$voom,
+                                 interaction$interaction.tbl)
+go_data_null <- getGOTermsForAllModes(interaction_null$voom,
+                                      interaction_null$interaction.tbl)
+
+
+interaction <- list(list(interaction = interaction,
+                         go.data = go_data),
+                    list(interaction = interaction_null,
+                         go.data = go_data_null))
+names(interaction) <- c("sample", "null")
+this_path <- paste0("data/",
+                   paste(T1, T2, cell_type, alpha, sep = "_"),
+                   ".rda")
+save(interaction, file = this_path)
+```
+
+

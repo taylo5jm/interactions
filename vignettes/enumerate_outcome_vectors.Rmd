@@ -1,0 +1,453 @@
+Enumeration of Theoretical Outcome Vectors
+====================================================
+
+```{r, echo = FALSE,message=FALSE, warning=FALSE}
+suppressPackageStartupMessages(library(magrittr))
+library(pheatmap)
+library(d3heatmap)
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+  library(grid)
+
+  # Make a list from the ... arguments and plotlist
+  plots <- c(list(...), plotlist)
+
+  numPlots = length(plots)
+
+  # If layout is NULL, then use 'cols' to determine layout
+  if (is.null(layout)) {
+    # Make the panel
+    # ncol: Number of columns of plots
+    # nrow: Number of rows needed, calculated from # of cols
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                     ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+
+  if (numPlots==1) {
+    print(plots[[1]])
+
+  } else {
+    # Set up the page
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+
+    # Make each plot, in the correct location
+    for (i in 1:numPlots) {
+      # Get the i,j matrix positions of the regions that contain this subplot
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
+}
+stringCoerce <- function(v) {
+    as.character(v) %>%
+      paste(collapse = ",", sep = " ") %>%
+      return()
+}
+source('~/Users/taylor/sitt/sitt/R/interaction_tools.R')
+interactionDistTable <- function(outcome.vectors, modes, classes) {
+  if (is.matrix(outcome.vectors)) {
+    outcome.vectors <- apply(outcome.vectors, 1, stringCoerce)
+  }
+  this_df <- data.frame(outcome.vectors, modes, classes)
+  colnames(this_df) <- c("Outcome.Vector", "Mode", "Class")
+  return(this_df)
+}
+ovTable <- function(pw_s, get.class = FALSE) {
+  if (is.matrix(pw_s)) {
+    if (nrow(pw_s) > 0) {
+      pw_s <- apply(pw_s, 1, stringCoerce)
+    }
+    else {
+      return("Matrix is empty")
+    }
+  }
+  if (is.character(pw_s)) {
+    pw_s <- pw_s %>% table %>% as.data.frame
+    colnames(pw_s) <- c("Outcome.Vector", "Freq")
+    pw_s$Log.Freq <- log(pw_s$Freq)
+    pw_s$Prop <- pw_s$Freq / sum(pw_s$Freq)
+    if (get.class == TRUE) {
+      pw_s$Class <- lapply(pw_s$Outcome.Vector, classFromOV) %>% unlist
+    }
+    return(pw_s)
+  }
+}
+qplotOutcomeVectorDist <- function(pw_s, remove.ni = TRUE, geom_bar = TRUE, log = "") {
+  if (!(is.character(pw_s))) {
+    pw_s <- apply(pw_s, 1, stringCoerce)
+  }
+
+  if (is.character(pw_s)) {
+    outcome_dist <- ovTable(pw_s)
+    if (remove.ni == TRUE) {
+      outcome_dist <- filter(outcome_dist, Outcome.Vector != "0,0,0,0,0,0")
+    }
+  }
+
+#   if (is.table(pw_s) | is.data.frame(pw_s)) {
+#     outcome_dist <- pw_s
+#     colnames(outcome_dist) <- c("Outcome.Vector", "Freq")
+#     if (remove.ni == TRUE) {
+#       outcome_dist <- filter(outcome_dist, Outcome.Vector != "0,0,0,0,0,0")
+#     }
+#   }
+  if (geom_bar == FALSE) {
+    if (log == "") {
+      print(barplot(outcome_dist$Freq))
+    }
+    else {
+      print(barplot(outcome_dist$Log.Freq))
+    }
+  }
+
+  if (geom_bar == TRUE) {
+    if (log == TRUE) {
+      this_log <- "y"
+      this_main <- "Log Frequency Distribution of Outcome Vectors"
+    }
+    else {
+      this_log <- ""
+      this_main <- "Frequency Distribution of Outcome Vectors"
+    }
+      p <- qplot(x = 1:nrow(outcome_dist), y = Freq, data = outcome_dist,
+                 geom = "bar", stat = "identity", xlab = "Outcome Vector", ylab = "Frequency",
+                 main = this_main, log = this_log)
+    return(p)
+  }
+}
+
+```
+## Enumerate Theoretical Outcome Vectors with n conditions and k ranks
+
+Suppose a set of 4 gene expression outputs can be coded as a 6-tuple with repetition, where the elements of the 6-tuple can assume an element in the set $s = (-1, 0, 1)$. Each element in the set of 4 gene expression outputs can assume an element in the set $k = (1, 2, 3, 4)$ where $k$ is the set of possible ranks that a gene expression output can assume.
+
+$4^{4} = 256$ permutations with repitition exist if these assumptions are satisfied. We can then take the ranks of each permutation and average the ties. A gene expression set $g = (1, 1, 1, 1)$ is the same as the set $h = (3, 3, 3, 3)$, when we are considering interaction effects present between the gene expression outputs. By taking the ranks, the number of unique interaction profiles is reduced to 75.  Informally, we can summarize this process as:
+$4^{4} = 256$ permutations --> ranks --> remove all duplicated permutations with repetition.
+
+#### Pairwise Comparison Outcome Vectors
+Unique interaction profiles can be coded into *pairwise comparison outcome vectors* by comparing the values of the gene expression outputs in 6 pairwise comparisons.
+
+1. $e_{x} vs. e_{0}$
+2. $e_{y} vs. e_{0}$
+3. $e_{x + y} vs. e_{0}$
+4. $e_{y} vs. e_{x}$
+5. $e_{x + y} vs. e_{x}$
+6. $e_{x + y} vs. e_{y}$
+
+where $e_{0}$, $e_{x}$, $e_{y}$, $e_{x + y}$ are the gene expression outputs for the null, signal $x$, signal $y$, and signal $x + y$. The elements of the 6-tuple can be equal to $-1$, $0$, or $1$ depending on whether the gene expression output of the first condition is greater than the the gene expression output of the second condition.
+
+In this implementation, some functions are defined to take the row ranks of matrix and make the 6 pairwise comparisons for the k = 4 conditions we are interested in.
+
+```{r, cache = TRUE}
+# rank tuples by row and allow ties
+rankTuples <- function(x) {
+  ranks <- matrix(0, nrow(x), ncol(x))
+  for (i in 1:nrow(x)) {
+    ranks[i,] <- rank(x[i,], ties.method = "average")
+  }
+  return(ranks)
+}
+
+# make pairwise comparisons by directly comparing values
+pwCompare <- function(v) {
+    compare <- function(val1, val2) {
+      if (val1 < val2) {
+        return(-1)
+      }
+      if (val1 == val2) {
+        return(0)
+      }
+      if (val1 > val2) {
+        return(1)
+      }
+    }
+
+    pwcomp <- matrix(0, nrow(v), ncol = 6)
+    for (i in 1:nrow(v)) {
+
+      e0 <- v[i,1]
+      ex <- v[i,2]
+      ey <- v[i,3]
+      exy <- v[i,4]
+
+      # ex vs. e0
+      pwcomp[i,1] <- compare(ex, e0)
+      # ey vs. e0
+      pwcomp[i,2] <- compare(ey, e0)
+      # exy vs. e0
+      pwcomp[i,3] <- compare(exy, e0)
+      # ey vs. ex
+      pwcomp[i,4] <- compare(ey, ex)
+      # exy vs. ex
+      pwcomp[i,5] <- compare(exy, ex)
+      # exy vs. ey
+      pwcomp[i,6] <- compare(exy, ey)
+
+    }
+    return(pwcomp)
+}
+```
+
+We then enumerate the theoretical outcome vectors, as described above, when n = 4 conditions are present and can assume k = (1, 2, 3, 4).
+```{r, cache = TRUE}
+#' Enumerate theoretical pairwise comparison outcome vectors given n conditions and k ranks
+#'
+#' @return matrix where each row represents a pairwise comparison outcome vector
+#' @examples
+#' enumerateThOutcomeVectors() %>% nrow
+enumerateThOutcomeVectors <- function() {
+  pwt_n <- gtools::permutations(4, 4, repeats.allowed=TRUE) %>%
+    rankTuples() %>% unique() %>%
+    pwCompare()
+  # pairwise comparison outcome vectors as character vector
+  pwt_s <<- apply(pwt_n, 1, stringCoerce)
+  return(pwt_n)
+}
+
+pwt_n <- enumerateThOutcomeVectors()
+```
+
+```{r, fig.align = 'center', fig.width = 10, fig.height = 10, cache = TRUE}
+pheatmap(pwt_n, color = c("#000099", "#FFFFFF", "#990000"), cluster_rows = FALSE, cluster_cols = FALSE)
+```
+
+There should be 75 unique pairwise comparison outcome vectors, when 6 comparisons can take on values in the set $s = (-1, 0, 1)$
+
+```{r, cache = TRUE}
+dim(pwt_n)
+pwt_n
+```
+
+This result is also supported by an implementation of the closed-form recurrence relation solution found in "CITE ME" and implemented by Dr. Stephen Hoang. In this implementation, the recurrence relation solution is used to compute the number of possible vectors when there are n = 4 conditions and k = (1, 2, 3, 4)
+```{r, cache=TRUE}
+# Stephen Hoang
+A <- function(n, k) {
+  if (n < 1 | k < 1) {
+    return(0)
+  }
+  if (k > n) {
+    return(0)
+  }
+  if (n == 1 & k == 1) {
+    return(1)
+  }
+  res <- k * (A(n - 1, k) + A(n - 1, k - 1))
+  return(res)
+}
+
+k <- 1:4
+lapply(k, FUN = A, n = 4) %>% Reduce(f = "+")
+```
+
+## Null Distribution
+
+Suppose we are interested in the null distribution of interaction classes and modes. First, we will generate a pseudorandom data set in the form of a 100,000 x 4 matrix, where each row represents a "gene" and each column represents a condition. We will actually generate three of these matrices that follow the Poisson, uniform and normal distribution. Each element in the pseudorandom matrices will be rounded to simulate a discrete distribution of RNA-seq counts.
+
+The rounding also provides an element of statistics in the simulation. Recall there are 3 interaction classes, one of which being the null class.
+
+7. $e_{x+y} - e_{x} - e_{y} + e_{0} > 0$  *Positive*
+8. $e_{x+y} - e_{x} - e_{y} + e_{0} < 0$  *Negative*
+9. $e_{x+y} - e_{x} - e_{y} + e_{0} = 0$  *No-Interaction*
+
+If we were to continue this simulation without rounding, then the "no-interaction" class would essentially be non-existent, since the probability that any set of gene expression outputs satisfies the "no-interaction" inequality is essentially 0.
+
+```{r, cache = TRUE}
+library(magrittr)
+set.seed(1983)
+rlist <- list(
+  unif_matrix = runif(100000, min = 2, max = 16) %>% matrix(nrow = 100000, ncol = 4, byrow = TRUE) %>% round,
+  norm_matrix = rnorm(100000, 8, 2) %>% matrix(nrow = 100000, ncol = 4, byrow = TRUE) %>% round,
+  pois_matrix = rpois(100000, lambda = 8) %>% matrix(nrow = 100000, ncol = 4, byrow = TRUE) %>% round
+)
+```
+
+We can code the outcome vectors with `pwCompare()`
+```{r, cache = TRUE}
+outcome_vectors <- lapply(rlist, pwCompare)
+outcome_vector_tbl <- lapply(outcome_vectors, ovTable, get.class = FALSE)
+```
+
+
+```{r}
+o <- outcome_vector_tbl
+sum_table <- data.frame(o[[1]]$Outcome.Vector, o[[1]]$Freq, o[[2]]$Freq, o[[3]]$Freq,
+                        o[[1]]$Log.Freq, o[[2]]$Log.Freq, o[[3]]$Log.Freq,
+                        o[[1]]$Prop, o[[2]]$Prop, o[[3]]$Prop)
+dists <- c("Unif", "Norm", "Pois")
+vars <- c("Freq", "Log.Freq", "Prop")
+cols <- list()
+for (i in 1:length(vars)) {
+  cols[[i]] <- lapply(dists, paste, vars[i], sep = ".") %>% unlist
+}
+colnames(sum_table) <- c("Outcome.Vector", unlist(cols))
+sum_table[,5:10] <- signif(sum_table[,5:10], digits = 3)
+sum_table
+```
+
+```{r, echo=FALSE, fig.cap = "Frequency distributions of outcome vectors coded from Uniform, Normal, and Poisson distribution pseudorandom matrices.", fig.width = 12, fig.height = 20, fig.align = 'center'}
+library(ggplot2)
+library(dplyr)
+p1 <- qplot(x = 1:nrow(outcome_vector_tbl[[1]]), y = Freq, data = outcome_vector_tbl[[1]],
+           geom = "bar", stat = "identity", xlab = "Outcome Vector", ylab = "Frequency",
+           main = "Frequency Distribution of Outcome Vectors coded from a pseudorandom uniformly
+           distributed matrix (n = 100,000)") + scale_x_discrete(breaks = 1:75)
+p2 <- qplot(x = 1:nrow(outcome_vector_tbl[[2]]), y = Freq, data = outcome_vector_tbl[[2]],
+            geom = "bar", stat = "identity", xlab = "Outcome Vector", ylab = "Frequency",
+            main = "Frequency Distribution of Outcome Vectors coded from a
+            pseudorandom normally distributed matrix (n = 100,000)") +
+           scale_x_discrete(breaks = 1:75)
+p3 <- qplot(x = 1:nrow(outcome_vector_tbl[[3]]), y = Freq, data = outcome_vector_tbl[[3]],
+            geom = "bar", stat = "identity", xlab = "Outcome Vector", ylab = "Frequency",
+            main = "Frequency Distribution of Outcome Vectors coded from a pseudorandom
+            Poisson-distributed matrix (n = 100,000)") + scale_x_discrete(breaks = 1:75)
+
+outcome_vector_tbl2 <- lapply(outcome_vector_tbl, arrange, Freq)
+p4 <- qplot(x = 1:nrow(outcome_vector_tbl2[[1]]), y = Freq, data = outcome_vector_tbl2[[1]],
+            geom = "bar", stat = "identity", xlab = "Outcome Vector", ylab = "Frequency",
+            main = "Frequency Distribution of Outcome Vectors coded from a pseudorandom uniformly
+            distributed matrix (n = 100,000)") + scale_x_discrete(breaks = 1:75)
+p5 <- qplot(x = 1:nrow(outcome_vector_tbl2[[2]]), y = Freq, data = outcome_vector_tbl2[[2]],
+            geom = "bar", stat = "identity", xlab = "Outcome Vector", ylab = "Frequency",
+            main = "Frequency Distribution of Outcome Vectors coded from a
+            pseudorandom normally distributed matrix (n = 100,000)") +
+  scale_x_discrete(breaks = 1:75)
+p6 <- qplot(x = 1:nrow(outcome_vector_tbl2[[3]]), y = Freq, data = outcome_vector_tbl2[[3]],
+            geom = "bar", stat = "identity", xlab = "Outcome Vector", ylab = "Frequency",
+            main = "Frequency Distribution of Outcome Vectors coded from a pseudorandom
+            Poisson-distributed matrix (n = 100,000)") + scale_x_discrete(breaks = 1:75)
+
+
+multiplot(p1, p2, p3, p4, p5, p6, cols = 1)
+```
+
+## Null Distribution: Class
+
+We then implement a function to classify an interaction by an interaction class.
+```{r}
+classifyByClass <- function(v) {
+  class_classifier <- function(v) {
+    e0 <- v[1]
+    ex <- v[2]
+    ey <- v[3]
+    exy <- v[4]
+    if (exy - ex - ey + e0 > 0) {
+      return("Positive")
+    }
+    if (exy - ex - ey + e0 < 0) {
+      return("Negative")
+    }
+    else {
+      return('NI')
+    }
+  }
+
+  if (is.numeric(v)) {
+    class_classifier(v)
+  }
+  if (is.matrix(v)) {
+    apply(v, 1, class_classifier)
+  }
+}
+
+rlist_classes <- lapply(rlist, classifyByClass)
+class_tbl <- lapply(rlist_classes, ovTable, get.class = FALSE)
+```
+
+PLOT CLASS DISTRIBUTION HERE
+```{r, fig.width = 12, fig.height = 15, fig.align = 'center'}
+p1 <- qplot(x = 1:nrow(class_tbl[[1]]), y = Freq, data = class_tbl[[1]],
+           geom = "bar", stat = "identity", xlab = "Outcome Vector", ylab = "Frequency",
+           main = "Frequency Distribution of Interaction Modes") + scale_x_discrete(breaks = 1:10)
+p2 <- qplot(x = 1:nrow(class_tbl[[2]]), y = Freq, data = class_tbl[[2]],
+            geom = "bar", stat = "identity", xlab = "Outcome Vector", ylab = "Frequency",
+            main = "Frequency Distribution of Interaction Modes") +
+           scale_x_discrete(breaks = 1:10)
+p3 <- qplot(x = 1:nrow(class_tbl[[3]]), y = Freq, data = class_tbl[[3]],
+            geom = "bar", stat = "identity", xlab = "Outcome Vector", ylab = "Frequency",
+            main = "Frequency Distribution of Interaction Modes") + scale_x_discrete(breaks = 1:10)
+multiplot(p1, p2, p3, cols = 1)
+```
+
+Finally, we classify each gene into an interaction mode. This function classifies each gene into an interaction class based on the inequalities that define each interaction mode.
+
+```{r, cache = TRUE}
+library(magrittr)
+classifyByMode <- function(v) {
+
+  e0 <- v[1]
+  ex <- v[2]
+  ey <- v[3]
+  exy <- v[4]
+
+  # positive -----------------------------------------------------------
+  if (exy - ex - ey + e0 > 0) {
+    if (e0 > max(ex, ey, exy)) {
+      return("Low.Stab")
+    }
+    if (ex >= exy & ex > ey & ex >= e0) {
+      return("X.Restores.Y")
+    }
+    if (ey >= exy & ey > ex & ey >= e0) {
+      return("Y.Restores.X")
+    }
+    if (exy >= max(e0, ex, ey) & ex - e0 > 0 | ey - e0 > 0) {
+        return("Pos.Syn")
+    }
+    if (sign(exy - e0) == 1 & sign(e0) == 1 & ex - e0 <= 0 & ey - e0 <= 0) {
+      return("Emer.Pos.Syn")
+    }
+
+    else {
+      return('unsorted')
+    }
+  }
+
+  # negative ------------------------------------------------------------------
+  if (exy - ex - ey + e0 < 0) {
+
+    if (e0 < min(ex, ey, exy)) {
+      return("High.Stab")
+    }
+    if (ex <= exy & ex < ey & ex <= e0) {
+      return("X.Inhibits.Y")
+    }
+    if (ey <= exy & ey < ex & ey <= e0) {
+      return("Y.Inhibits.X")
+    }
+    if (exy < min(e0, ex, ey) & ex - e0 < 0 | ey - e0 < 0) {
+      return("Neg.Syn")
+    }
+    if (sign(exy - e0) == -1 & sign(e0) == 1 & ex - e0 >= 0 & ey - e0 >= 0) {
+      return("Emer.Neg.Syn")
+    }
+
+    else {
+      return("unsorted")
+    }
+  }
+
+  # no interaction ---------------------------------------------------------------
+  if (exy - ex - ey + e0 == 0) {
+    return('NI')
+  }
+
+  # never executed
+  else {
+    return('error')
+  }
+}
+```
+
+```{r}
+rclasses <- lapply(rlist, classifyByMode)
+```
+
+```{r}
+# PLOT MODES DISTRIBUTION
+```
+
+```{r}
+sessionInfo()
+```

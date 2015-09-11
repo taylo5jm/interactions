@@ -1,0 +1,18 @@
+# References
+
+```{r}
+citation("limma")
+citation("edgeR")
+citation("ggplot2")
+citation("dplyr")
+citation("GGally")
+citation("topGO")
+citation("Biobase")
+citation("knitr")
+citation("rmarkdown")
+citation("caret")
+citation("RMySQL")
+citation("magrittr")
+citation("devtools")
+```
+

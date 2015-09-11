@@ -1,0 +1,11 @@
+Title
+========================================================
+
+```{r}
+edgeR_modes <- sit_met_edgeR$modes
+pw_s <- edgeR_modes %>% table %>% as.data.frame
+colnames(pw_s) <- c("Mode", "Freq")
+pw_s$Class <- lapply(as.character(pw_s$Mode), findClass) %>% unlist
+pw_s$Prop <- pw_s$Freq / sum(pw_s$Freq)
+
+```
