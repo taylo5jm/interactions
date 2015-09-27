@@ -11,7 +11,6 @@ isValidCombination <- function(T1, T2, DRUG_COMBINATION) {
  if (DRUG_COMBINATION == TRUE) {
    # male/drug x/drug y/drug xy
    all_males <- dbGetQuery(CON, paste0("SELECT * FROM treatment
-                                       NATURAL JOIN hsexperiment
                                        NATURAL JOIN donor_pair
                                        NATURAL JOIN donor
                                        NATURAL JOIN cell
@@ -45,7 +44,7 @@ isValidCombination <- function(T1, T2, DRUG_COMBINATION) {
  }
 }
 
-#' Get all drug combinations present in eld_v4
+#' Get all drug combinations present
 #'
 #' @param CON MySQLConnection object
 #' @return list where first element are the names of all drug combinations in the database
@@ -56,7 +55,6 @@ isValidCombination <- function(T1, T2, DRUG_COMBINATION) {
 
 allDrugCombinations <- function(CON) {
   this_combos <- dbGetQuery(CON, "SELECT * FROM treatment
-                                 NATURAL JOIN hsexperiment
                                  NATURAL JOIN donor_pair
                                  NATURAL JOIN donor
                                  NATURAL JOIN cell
@@ -88,7 +86,6 @@ getCondition <- function(CON, condition, conc = "", sex = "", cell.type = "") {
     condition <- paste(condition, sep = " / ")
   }
   this_combos <- dbGetQuery(CON, paste0("SELECT * FROM treatment
-                                        NATURAL JOIN hsexperiment
                                         NATURAL JOIN donor_pair
                                         NATURAL JOIN donor
                                         NATURAL JOIN cell
@@ -143,7 +140,6 @@ filterMetadata <- function(this_combos, conc, sex, cell.type) {
 
 getInteraction <- function(CON, CONDITIONS, cell.type, sex) {
    metadata <- dbGetQuery(CON, paste0("SELECT * FROM treatment
-                                      NATURAL JOIN hsexperiment
                                       NATURAL JOIN donor_pair
                                       NATURAL JOIN donor
                                       NATURAL JOIN cell
@@ -205,13 +201,14 @@ setConditions <- function(null, signal.x, signal.y, signal.xy) {
 #' @param T1 character vector of length 1 indicating Signal X
 #' @param T2 character vector of length 1 indicating Signal Y
 #' @param treatment.conc.tbl table (1d vector)
-#' @return vector indices in table where Signal X/Signal Y combination
+#' @return vector indices in table where Signal X/ Signal Y combination
 #' is present
 #'
 #' @examples
 #' \dontrun{
 #' comboIndices("Atorvastatin", "Pioglitazone", treatment_conc_tbl)
 #' }
+#' 
 comboIndices <- function(T1, T2, treatment.conc.tbl, conc) {
  # treatment combo names in table
  t1_combo_name <- strsplit(T1, c())[[1]][1:5]
@@ -292,7 +289,6 @@ getVehicles <- function (CON, cell.type, metadata) {
    n_batches <- uniqueBatches(metadata)
    if (length(n_batches) == 1) {
      dbGetQuery(CON, paste0("SELECT * FROM treatment
-                            NATURAL JOIN hsexperiment
                             NATURAL JOIN donor_pair
                             NATURAL JOIN donor
                             NATURAL JOIN cell
@@ -301,14 +297,12 @@ getVehicles <- function (CON, cell.type, metadata) {
                             NATURAL JOIN rnaseq_assay
                             WHERE
                             treatment_name LIKE 'None'
-                            AND treatment_label RLIKE 'ELD0107'
                             AND donor_id = ", donor,
                             " AND cell_name = ", shQuote(cell.type),
                             " LIMIT 1"))
    }
    else {
      dbGetQuery(CON, paste0("SELECT * FROM treatment
-                            NATURAL JOIN hsexperiment
                             NATURAL JOIN donor_pair
                             NATURAL JOIN donor
                             NATURAL JOIN cell
@@ -331,7 +325,7 @@ getVehicles <- function (CON, cell.type, metadata) {
 }
 
 #' Get matrix of expected (raw) counts from gene_rsem_count with RNA Seq assay-id 
-#' (HS)
+#' 
 #' @param CON MySQLConnection object (should be connected to database with
 #' table "gene_rsem_count" containing field "rnaseq_assay_id")
 #' @param metadata data.frame where rows are libraries and columns are
@@ -355,9 +349,10 @@ getExpectedCounts <- function(CON, metadata, level = "gene") {
 #' Get data.frame with gene metadata
 #'
 #' @param CON MySQLConnection object
-#' @param counts matrix of counts where rows are genes and columns are libraries
-#' @param level character vector indicating whether gene or isoform counts should be retrieved. NOTE:
-#' only "gene" is supported as of now.
+#' @param counts matrix of counts where rows are genes and columns are 
+#'  libraries
+#' @param level character vector indicating whether gene or isoform counts 
+#' should be retrieved. NOTE: only "gene" is supported as of now.
 #' @return data.frame with gene metadata
 #' @export getGeneMetadata
 
@@ -369,32 +364,15 @@ getGeneMetadata <- function(CON, counts, level = "gene") {
 
 #' Strip counts data.frame of any extra variables
 #'
-#' @param counts matrix of counts where each row is a gene and each column is a library
-#' @return counts matrix of where each row is a gene and each column is a library
+#' @param counts matrix of counts where each row is a gene and each column is a
+#'  library
+#' @return counts matrix of where each row is a gene and each column is a 
+#'  library
 #' @export asCountsMatrix
 asCountsMatrix <- function(counts) {
- # # just expected counts
+ # just expected counts
  counts <- counts[4,1:ncol(counts)] %>% sapply(unlist)
  return(counts)
-}
-
-
-checkMetadata <- function(metadata, all.concs = TRUE) {
-  if (is.numeric(metadata)) {
-    tryAllConcs <- function(CON, T1, T2, T12, cell_type, conc) {
-      conc <- c("Low", "Mid", "High", "Super", "Cmax")
-      this_list <- list()
-      for (i in 1:length(this_list)) {
-        this_list[[i]] <- getAllMetadata(CON, T1, T2, T12, cell_type, conc = conc[i])
-      }
-      return(this_list)
-    }
-    tryAllConcs(CON, T1, T2, T12, cell_type, conc)
-    return("Metadata not retrieved for treatment/concentration condition")
-  }
-  else {
-    return(metadata)
-  }
 }
 
 

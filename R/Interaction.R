@@ -42,4 +42,3 @@ initInteraction <- function(l) {
                     voom = l$voom, d = l$d, design = l$design)
   return(this_combo)
 }
-

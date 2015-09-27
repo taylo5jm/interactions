@@ -38,9 +38,9 @@ limmaModeClassifier <- function(counts, genes, metadata,
   top_tables <- list()
 
   for (i in 1:ncol(design)) {
-    top_tables[[i]] <- topTable(eb, coef = i, number = nrow(v$E), confint = ci,
-                                p.value = 1, sort.by = "none", adjust.method = "fdr")
-  }
+      top_tables[[i]] <- limma::topTable(eb, coef = i, number = nrow(v$E), confint = ci,
+                                  p.value = 1, sort.by = "none", adjust.method = "fdr")
+    }
 
   # Class Classification ----------------------------------------------------------------
   # log fold changes and confidence interval bounds for contrasts of interest
@@ -102,15 +102,16 @@ limmaModeClassifier <- function(counts, genes, metadata,
 
 #' Interaction mode classification with edgeR likelihood ratio tests
 #'
-#' @param counts numeric matrix of counts where rows are genes and columns are libraries
+#' @param counts numeric matrix of counts where rows are genes and columns are 
+#'  libraries
 #' @param genes data.frame of gene metadata
 #' @param metadata data.frame with metadata retrieved for 4 conditions
 #' @param alpha numeric vector indicating what alpha should be used to
 #' code pairwise comparison outcome vectors
-#' @param null Boolean TRUE if null distribution should be simulated by permuting columns
-#' of counts matrix
-#' @return list of interaction modes & classes, outcome vectors, EList (voom), lmFit() object,
-#' eBayes() object, design matrix and summary table
+#' @param null Boolean TRUE if null distribution should be simulated by 
+#' permuting columns of counts matrix
+#' @return list of interaction modes & classes, outcome vectors, EList (voom),
+#'  lmFit() object, eBayes() object, design matrix and summary table
 #' @export edgeRModeClassifier
 
 edgeRModeClassifier <- function(counts, genes, metadata, design, alpha = 0.01,
@@ -120,7 +121,8 @@ edgeRModeClassifier <- function(counts, genes, metadata, design, alpha = 0.01,
   # pairwise <- lapply(pairwise, topTags, n = nrow(d$counts),
   #                  adjust.method = "fdr", sort.by = "none")
   edgeR_outcome_vectors <- codeEdgeROutcomeVectors(pairwise, alpha)
-  edgeR_modes <- modeClassification(edgeR_outcome_vectors, pipeline = "edgeR")
+  edgeR_modes <- classifyByThOutcomeVector(edgeR_outcome_vectors, 
+                                           pipeline = "edgeR")
 
   # interaction modes
   edgeR_interaction_tbl <- interactionGeneTable(v, edgeR_modes,
@@ -142,17 +144,17 @@ edgeRModeClassifier <- function(counts, genes, metadata, design, alpha = 0.01,
 
 #' Interaction mode classification with limma and edgeR
 #'
-#' @param counts numeric matrix of counts where rows are genes and columns are libraries
+#' @param counts numeric matrix of counts where rows are genes and columns are 
+#'  libraries
 #' @param genes data.frame of gene metadata
 #' @param metadata data.frame with metadata retrieved for 4 conditions
 #' @param alpha numeric vector indicating what alpha should be used to
 #' code pairwise comparison outcome vectors
-#' @param null Boolean TRUE if null distribution should be simulated by permuting
-#' columns of counts matrix
+#' @param null Boolean TRUE if null distribution should be simulated by 
+#' permuting columns of counts matrix
 #' @return nested list
 #' @export interactionModeClassifier
 #'
-
 interactionModeClassifier <- function(data, 
                                       DRUG_COMBINATION = TRUE,
                                       ci = 0.99, alpha = 0.01) {
@@ -190,95 +192,94 @@ interactionModeClassifier <- function(data,
 #' @return character vector of length 1 indicating interaction mode or lack thereof (null vector)
 #' @export classifyByThOutcomeVector
 
-classifyByThOutcomeVector <- function(ov_logfc, pipeline = "limma") {
-  # enumerate theoretical outcome vectors
+ classifyByThOutcomeVector <- function(ov_logfc, pipeline = "limma") {
+   
+  # enumerate theoretical outcome vectors ------------------------------------
   th.vectors <- outcomeVectorsByMode()
   
-  # mathematically defined interaction modes
-  MODES <<- c("Low.Stab", "X.Restores.Y", "Y.Restores.X", "Pos.Syn", "Emer.Pos.Syn",
-             "High.Stab", "X.Inhibits.Y", "Y.Inhibits.X", "Neg.Syn", "Emer.Neg.Syn",
-             "Sym.Right", "Sym.Left", "Step.Up", "Step.Down", "NI", "A", "UC")
+  # mathematically defined interaction modes ---------------------------------
+  MODES <<- allModes()
   
-  # classify modes
+  # classify modes -------------------------------------------------
   modeClassifier <- function(ov_logfc, th.vectors, pipeline) {
     ov <- ov_logfc[1:6]
     logfc <- ov_logfc[7:length(ov_logfc)]
     
     # additive vectors ----------------------------------------------
     if (isMode(ov, th.vectors$sym_left)) {
-      return(factor("Sym.Left"))
+      return("Sym.Left")
     }
 
     if (isMode(ov, th.vectors$sym_right)) {
-      return(factor("Sym.Right"))
+      return("Sym.Right")
     }
 
     if (isMode(ov, th.vectors$step_down)) {
-      return(factor("Step.Down"))
+      return("Step.Down")
     }
 
     if (isMode(ov, th.vectors$step_up)) {
-      return(factor("Step.Up"))
+      return("Step.Up")
     }
 
     # null vector ---------------------------------------------------
     if (isNi(ov)) {
-      return(factor("NI"))
+      return("NI")
     }
     # anomalous vector ---------------------------------------------
     if (isAnomaly(ov, th.vectors)) {
-      return(factor("A"))
+      return("A")
     }
 
-    # Negative Interaction, XY < X + Y ----------------------------------------
+    # Negative Interaction, XY < X + Y ---------------------------------------
     if(getIntClass(logfc, pipeline) == "Negative") {
 
       if (isMode(ov, th.vectors$high_stab)) {
-        return(factor("High.Stab"))
+        return("High.Stab")
       }
       if (isMode(ov, th.vectors$x_inhibits_y)) {
-        return(factor("X.Inhibits.Y"))
+        return("X.Inhibits.Y")
       }
       if (isMode(ov, th.vectors$y_inhibits_x)) {
-        return(factor("Y.Inhibits.X"))
+        return("Y.Inhibits.X")
       }
       if (isMode(ov, th.vectors$neg_syn)) {
-        return(factor("Neg.Syn"))
+        return("Neg.Syn")
       }
       if (isMode(ov, th.vectors$emer_neg_syn)) {
-        return(factor("Emer.Neg.Syn"))
+        return("Emer.Neg.Syn")
       }
       else {
-        return(factor("UC"))
+        return("UC")
       }
     }
 
-    # Positive Interaction, XY > X + Y ------------------------------------------
+    # Positive Interaction, XY > X + Y ----------------------------------------
     if(getIntClass(logfc, pipeline) == "Positive") {
       if (isMode(ov, th.vectors$low_stab)) {
-        return(factor("Low.Stab"))
+        return("Low.Stab")
       }
       if (isMode(ov, th.vectors$x_restores_y)) {
-        return(factor("X.Restores.Y"))
+        return("X.Restores.Y")
       }
       if (isMode(ov, th.vectors$y_restores_x)) {
-        return(factor("Y.Restores.X"))
+        return("Y.Restores.X")
       }
       if (isMode(ov, th.vectors$pos_syn)) {
-        return(factor("Pos.Syn"))
+        return("Pos.Syn")
       }
       if (isMode(ov, th.vectors$emer_pos_syn)) {
-        return(factor("Emer.Pos.Syn"))
+        return("Emer.Pos.Syn")
       }
       
       # unclassified
       else {
-        return(factor("UC"))
+        return("UC")
       }
     }
 
     else {
-      return(factor("NI"))
+      return("NI")
     }
   }
   return(apply(ov_logfc, 1, modeClassifier, th.vectors, pipeline = pipeline) %>%
@@ -310,5 +311,30 @@ tuneClassifier <- function(counts, genes, metadata, alphas,
                                          null = null)
   }
   return(res_list)
+}
+
+#' Interaction mode classification with matrix of outcome vectors and log fold changes
+#'
+#' @param res matrix where columns 1:6 are the elements of the outcome vectors and columns
+#' 7:length(res) are the log fold changes for interaction class classification
+#' @param pipeline character vector of length n = 1 indicating pipeline to use for
+#' interaction mode classification ("edgeR" or "limma")
+#' @return character vector of length m = nrow(res) indicating interaction modees
+#' @export modeClassification
+#' @examples
+#' \dontrun{
+#' library(limma)
+#' ov <- codeLimmaOutcomeVectors(eb, design)
+#' limma_modes <- modeClassification(ov, pipeline = "limma")
+#' }
+
+modeClassification <- function(res, pipeline) {
+  if (pipeline == "edgeR") {
+    modes <- classifyByThOutcomeVector(res, "edgeR")
+  }
+  if (pipeline == "limma") {
+    modes <- classifyByThOutcomeVector(res, "limma")
+  }
+  return(modes)
 }
 

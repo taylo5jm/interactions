@@ -1,7 +1,15 @@
-Outcome Vectors, Interaction Modes & Classes Reference
-========================================================
-```{r, warning=FALSE}
+---
+title: "Outcome Vectors, Interaction Modes & Classes Reference"
+author: Justin Taylor
+date: "9/26/2015"
+output:
+  html_document:
+    theme: "united"
+---
+
+```{r, echo = FALSE, warning=FALSE}
 library(magrittr)
+suppressPackageStartupMessages(library(interactions))
 ```
 
 ### Enumeration of Outcome Vectors
@@ -16,10 +24,10 @@ For 4 gene expression outputs ($e_{0}$, $e_{X}$, $e_{Y}$, $e_{X + Y}$), there ar
 6. $e_{x + y} vs. e_{y}$
 
 
-#### No-Interaction Outcome Vectors
+#### Additive Outcome Vectors
 $5 / 75$ enumerated vectors are consistent with a lack of interaction. `isNI` returns `TRUE` if an outcome vector matches one of the 5 enumerated. Note that the current implementation of the main classification function will result in all null vectors being classified as "NI", whereas the other 4 are divided into 2 further conjugate pairs (Symmetric Left/Right and Step Up/Down).
 
-```{r}
+```{r, cache = TRUE}
 ni_list <- list(
 sym.left = c(4, 2, 4, 2, "Symmetric Left"),
 sym.right = c(2, 4, 2, 4, "Symmetric Right"),
@@ -29,7 +37,7 @@ null.vector = c(2, 2, 2, 2, "Null Vector")
 )
 ```
 
-```{r, echo=FALSE, fig.cap="Barplots of theoretically enumerated 'non-interaction' profiles", warning = FALSE}
+```{r, echo=FALSE, fig.cap="Barplots of theoretically enumerated 'non-interaction' profiles", warning = FALSE, cache = TRUE}
 library(ggplot2)
 par(mfrow = c(2,2))
 for (i in 1:5) {
@@ -68,7 +76,7 @@ Note the inequalities that define each mode are the inverse of one another. Thes
 
 Below, the outcome vectors associated with each interaction class and mode will be hard-coded. The outcome vector - mode associations were constructed from [CITE MY SPREADSHEET] and these results agreed with the full enumeration of interaction profiles in [CITE THEIR BARPLOTS]. Here, we implement a function to take a matrix of outcome vectors associated with an interaction class/mode as input and output the matrix of vectors that are associated with the opposite interaction class/mode.
 
-```{r}
+```{r, cache = TRUE}
 #' generate outcome vectors for the opposite class/mode
 #'
 #' @param a_matrix matrix of n rows where each row is a pairwise comparison outcome vector
@@ -108,7 +116,7 @@ There are 41 outcome vectors associated with 5 modes in the positive interaction
 $e_{0} > max(e_{x}, e_{y}, e_{x + y})$
 
 The gene expression output of the vehicle condition (condition 1) is greater than the gene expression output of signal x, signal y, and signal x + y (conditions 1, 2, 3)
-```{r, echo=FALSE}
+```{r, echo=FALSE, cache = TRUE}
 # Low Stabilization -----------------------------------------------------------
 low_stab <- matrix(c(-1, -1, -1, -1, -1, -1,
                      -1, -1, -1, -1, -1, 0,
@@ -128,7 +136,7 @@ low_stab <- matrix(c(-1, -1, -1, -1, -1, -1,
 )
 low_stab_s <- apply(low_stab, 1, stringCoerce)
 ```
-```{r}
+```{r, cache = TRUE}
 low_stab
 ```
 
@@ -139,7 +147,7 @@ $e_{x} > e_{y}$ and
 $e_{x} >= e_{0}$
 
 The gene expression output of signal x is greater than or equal to the output of the signal combination (condition 4), the output of signal x (condition 2) is greater than the output of signal y (condition 3), and the output of signal x (condition 2) is greater than or equal to the output of the vehicle (condition 1).
-```{r, echo = FALSE}
+```{r, echo = FALSE, cache = TRUE}
 x_restores_y <- matrix(c(0, -1, -1, -1, -1, 1,
                          0, -1, 0, -1, 0, 1,
                          1, -1, -1, -1, -1, 1,
@@ -149,7 +157,7 @@ x_restores_y <- matrix(c(0, -1, -1, -1, -1, 1,
                        nrow = 6, ncol = 6, byrow = TRUE)
 x_restores_y_s <- apply(x_restores_y, 1, stringCoerce)
 ```
-```{r}
+```{r, cache = TRUE}
 x_restores_y
 ```
 
@@ -159,7 +167,7 @@ $e_{y} > e_{x}$ and
 $e_{y} >= e_{0}$
 
 The gene expression output of signal y is greater than or equal to the gene expression output of the signal combination (condition 4) and the gene expression output of signal y is greater than the output of signal x, and the output of signal y (condition 3) is greater than or equal to the output of the vechicle (condition 1)
-```{r, echo=FALSE}
+```{r, echo=FALSE, cache = TRUE}
 y_restores_x <- matrix(c(-1, 0, -1, 1, 1, -1,
                          -1, 0, 0, 1, 1, 0,
                          -1, 1, -1, 1, 1, -1,
@@ -169,7 +177,7 @@ y_restores_x <- matrix(c(-1, 0, -1, 1, 1, -1,
                        nrow = 6, ncol = 6, byrow = TRUE)
 y_restores_x_s <- apply(y_restores_x, 1, stringCoerce)
 ```
-```{r}
+```{r, cache = TRUE}
 y_restores_x
 ```
 ### 4. Positive Synergy
@@ -178,7 +186,7 @@ $e_{x + y} >= max(e{0}, e_{x}, e_{y})$ and
 $e_{x} - e_{0} > 0$ or $e_{y} - e_{0} > 0$
 
 The gene expression output of the signal combination (condition 4) is greater than or equal to the maximum output of the vehicle, signal x, and signal y (conditions 1, 2, 3) and the fractional output of signal x (condition 2 - condition 1) is greater than 0 or the fractional output of signal y (condition 3 - condition 1) is greater than 0.
-```{r, echo=FALSE}
+```{r, echo=FALSE, cache = TRUE}
 pos_syn <- matrix(c(-1, 1, 1, 1, 1, 1,
                     0, 1, 1, 1, 1, 1,
                     1, -1, 1, -1, 1, 1,
@@ -188,7 +196,7 @@ pos_syn <- matrix(c(-1, 1, 1, 1, 1, 1,
                     1, 1, 1, 1, 1, 1
                     ), nrow = 7, ncol = 6, byrow = TRUE)
 ```
-```{r}
+```{r, cache = TRUE}
 pos_syn
 ```
 ### 5. Emergent Positive Synergy
@@ -197,7 +205,7 @@ $sign(0) = +1$ and
 $e_{x} - e_{0} <= 0$ & $e_{y} - e_{0} <= 0$
 
 The fractional gene expression output of the signal combination (condition 4 - condition 1) is greater than 0 and the sign of 0 is 1 and the fractional gene expression outputs of both signal x and signal y are less than 0.
-```{r, echo=FALSE}
+```{r, echo=FALSE, cache = TRUE}
 emer_pos_syn <- matrix(c(-1, -1, 0, -1, 1, 1,
                          -1, -1, 0, 0, 1, 1,
                          -1, -1, 0, 1, 1, 1,
@@ -210,16 +218,16 @@ emer_pos_syn <- matrix(c(-1, -1, 0, -1, 1, 1,
                        nrow = 9, ncol = 6, byrow = TRUE)
 emer_pos_syn_s <- apply(emer_pos_syn, 1, stringCoerce)
 ```
-```{r}
+```{r, cache = TRUE}
 emer_pos_syn
 ```
 
 ### Positive Outcome Vectors
-```{r, echo=FALSE}
+```{r, echo=FALSE, cache = TRUE}
 pos_ov <- rbind(low_stab, x_restores_y, y_restores_x, pos_syn, emer_pos_syn)
 pos_ov_s <- apply(pos_ov, 1, stringCoerce)
 ```
-```{r}
+```{r, cache = TRUE}
 pos_ov
 ```
 
@@ -231,7 +239,7 @@ There are 41 outcome vectors associated with 5 modes in the negative interaction
 $e_{0} < max(e_{x}, e_{y}, e_{x + y})$
 
 The gene expression output of the vehicle condition (condition 1) is less than the gene expression output of signal x, signal y, and signal x + y (conditions 1, 2, 3)
-```{r, echo=FALSE}
+```{r, echo=FALSE, cache = TRUE}
 # High Stabilization ----------------------------------------------------------
 high_stab <- oppositeVectors(low_stab)
 high_stab_s <- apply(high_stab, 1, stringCoerce)
@@ -247,7 +255,7 @@ $e_{x} < e_{y}$ and
 $e_{x} <= e_{0}$
 
 The gene expression output of signal x is less than or equal to the output of the signal combination (condition 4), the output of signal x (condition 2) is less than the output of signal y (condition 3), and the output of signal x (condition 2) is less than or equal to the output of the vehicle (condition 1).
-```{r}
+```{r, cache=TRUE}
 # X Inhibits Y ----------------------------------------------------------------
 x_inhibits_y <- oppositeVectors(x_restores_y)
 x_inhibits_y
@@ -260,7 +268,7 @@ $e_{y} < e_{x}$ and
 $e_{y} <= e_{0}$
 
 The gene expression output of signal y is less than or equal to the gene expression output of the signal combination (condition 4) and the gene expression output of signal y is less than the output of signal x, and the output of signal y (condition 3) is less than or equal to the output of the vechicle (condition 1)
-```{r, echo=FALSE}
+```{r, echo=FALSE, cache=TRUE}
 y_inhibits_x <- oppositeVectors(y_restores_x)
 y_inhibits_x_s <- apply(y_inhibits_x, 1, stringCoerce)
 ```
@@ -275,7 +283,7 @@ $e_{x} - e_{0} < 0$ or $e_{y} - e_{0} < 0$
 
 The gene expression output of the signal combination (condition 4) is less than or equal to the maximum output of the vehicle, signal x, and signal y (conditions 1, 2, 3) and the fractional output of signal x (condition 2 - condition 1) is less than 0 or the fractional output of signal y (condition 3 - condition 1) is less than 0.
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, cache=TRUE}
 neg_syn <- oppositeVectors(pos_syn)
 ```
 ```{r}
@@ -288,14 +296,14 @@ $sign(0) = -1$ and
 $e_{x} - e_{0} >= 0$ & $e_{y} - e_{0} >= 0$
 
 The fractional gene expression output of the signal combination (condition 4 - condition 1) is less than 0 and the sign of 0 is -1 and the fractional gene expression outputs of both signal x and signal y are greater than 0.
-```{r}
+```{r, cache = TRUE}
 emer_neg_syn <- oppositeVectors(emer_pos_syn)
 emer_neg_syn
 emer_neg_syn_s <- apply(emer_neg_syn, 1, stringCoerce)
 ```
 
 ### Negative Outcome Vectors
-```{r, echo=FALSE}
+```{r, echo=FALSE, cache=TRUE}
 neg_ov <- rbind(high_stab, x_inhibits_y, y_inhibits_x, neg_syn, emer_neg_syn)
 neg_ov_s <- apply(neg_ov, 1, stringCoerce)
 ```
@@ -304,7 +312,7 @@ neg_ov
 ```
 
 ### No-Interaction Vectors
-```{r, echo=FALSE}
+```{r, echo=FALSE, cache=FALSE}
 ni_ov <- matrix(c(rep(0, 6),
                 1, 0, 1, -1, 0, 1,
                 0, 1, 1, 1, 1, 0,
@@ -324,7 +332,7 @@ null_ov_s <- stringCoerce(c(0, 0, 0, 0, 0, 0))
 ```
 
 ### No Interaction Vectors
-```{r}
+```{r, cache=FALSE}
 sym_right <- c(1, 0, 1, -1, 0, 1)
 sym_left <- c(-1, 0, -1, 1, 0, -1)
 

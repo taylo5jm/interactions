@@ -1,0 +1,28 @@
+---
+title: "Interaction Classification Background"
+author: "Justin Taylor"
+date: "09/18/2015"
+output: 
+  html_document:
+    theme: united
+---
+
+
+We discuss *interactions*, a R package with functions to classify an interaction profile (set of gene expression outputs) into an interaction class and interaction mode, a well-defined behavior. This theoretical framework is discussed in [Combinatorial code governing cellular responses to complex stimuli](www.nature.com/ncomms/2015/150421/ncomms7847/full/ncomms7847.html) (Cappuccio et. al). 
+
+To summarize the aforementioned paper, consider the a set of 4 gene expression outputs. Signals: $\theta{}$, $X$, $Y$, $X + Y$. We are interested in predicting the effects of $X + Y$ that cannot be predicted from signal $X$ or signal $Y$ alone. The set of 4 gene expression outputs can result in $82$ interaction profiles, or statistically different *interaction profiles*. 
+
+These interaction profiles can be further classified into interaction classes. An interaction class is defined by:
+$$\Delta{X} + \Delta{Y} > \Delta{X + Y}$$ Positive
+$$\Delta{X} + \Delta{Y} < \Delta{X + Y}$$ Negative
+
+where the fractional effects of any signal can be calculated by subtracting the gene expression output of \theta{} from the gene expression output of the signal. Interaction profiles that do not satisfy one of these conditions are labeled as *additive* or *null*. 
+
+Additive interaction profiles are defined by:
+$$\Delta{X} +\Delta{Y} = \Delta{X + Y}$$
+
+Null interaction profiles are defined as:
+$$\Delta{\theta{}} = \Delta{X} = \Delta{Y} = \Delta{X + Y}$$ 
+
+Interactions classified into a class can then be classified by an *interaction mode* with a well-defined mathematical behavior. The positive and negative interaction classes are comprised of 5 modes each. An example of a mode in the positive class would be *emergent positive synergy*. Each mode in a class has a conjugate mode in the opposite class (e.g. *emergent negative synergy*). 
+

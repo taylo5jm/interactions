@@ -1,14 +1,21 @@
-## Interaction Class & Mode Classification Implementation
-========================================================
+---
+title: "Interaction Class & Mode Classification Implementation"
+author: Justin Taylor
+date: "9/26/2015"
+output:
+  html_document:
+    theme: "united"
+---
 
+## Additive and Null Interactions
+The algorithm first checks to see if an outcome vector is consistent with 1/5 additive vectors. First, the 4/5 additive vectors are tried. Then, the algorithm checks to see if the vector is a null outcome vector. Before going on to check if the outcome vector can be matched to a positive/negative interaction class/mode, the vector is checked to see if it was enumerated as 1/75 theoretical outcome vectors. If the vector was not enumerated, then the outcome vector is classified as anomalous ("A").
 
-The algorithm first checks to see if an outcome vector is consistent with 1/5 no-interaction vectors. First, the 4/5 additive vectors are tried. Then, the algorithm checks to see if the vector is a null outcome vector. Before going on to check if the outcome vector can be matched to a positive/negative interaction class/mode, the vector is checked to see if it was enumerated as 1/75 theoretical outcome vectors. If the vector was not enumerated, then the outcome vector is classified as anomalous ("A").
-
+## Positive and Negative Interaction Classes
 At this point, we know that our vector was enumerated theoretically and is consistent with some positive or negative interaction. If the outcome vector in question makes it this far in the decision tree, we need to classify the interaction's *class*. Some vectors can exhibit modes in the positive class or negative class. Thus, the class of an interaction must be determined before mode classification. If the class is not determined before mode classification, then the outcome vector could be defined by two modes but will only be labeled as the mode that is highest in the decision tree.
 
-To classify an interaction's class, we will use the log-fold changes calculated with limma or the log-fold changes calculated with likelihood ratio tests in the case of the `edgeR` pipeline. In the case of the `edgeR` pipeline, if the fold-change of XY =/= X + Y, then the interaction is classified into a class. The same is done for limma, except a vector of four values must be passed to the `getIntClass` function for the four coefficients denoting the conditions of the experiment.
+To classify an interaction's class, we will use the log-fold changes calculated with limma or the log-fold changes calculated with likelihood ratio tests in the case of the `edgeR` pipeline. In the case of the `edgeR` pipeline, if the fold-change of $XY \neq{} X + Y$, then the interaction is classified into a class. The same is done for limma, except a vector of four values must be passed to the `getIntClass` function for the four coefficients denoting the conditions of the experiment.
 
-```{r}
+```{r, eval = FALSE}
 #' get character string classification for interaction class
 #'
 #' @param logfc Numeric vector of log fold changes or character vector indicating interaction mode
@@ -19,6 +26,7 @@ To classify an interaction's class, we will use the log-fold changes calculated 
 #' getIntClass(logfc, pipeline = "edgeR")
 #' logfc <- "High.Stab"
 #' getIntClass(logfc)
+
 getIntClass <- function(logfc, pipeline = "limma") {
   # logfc is a vector where each element is a log fold change for a comparison or condition
   if (is.numeric(logfc)) {
@@ -82,16 +90,14 @@ getIntClass <- function(logfc, pipeline = "limma") {
 }
 ```
 
+## Interaction Modes
 Once an interaction is assigned an interaction class, then we can map the outcome vector to an interaction mode in that particular interaction class, since the outcome vectors associated with modes in a particular class are mutually exclusive (unlike outcome vectors associated with modes in both interaction classes).
 
-
-[VERY WEAK POINT]
-Despite, some interactions will fall into a class, but not an interaction mode in that class. Since we are just using the log-fold changes to classify the interaction classes, one might think that these interactions are actually closer to being non-interactions than anything else. At any rate, they will be labeled as anomalies and can be classified with k-nearest neighbors.
+Despite, some interactions will fall into a class, but not an interaction mode in that class. Since we are just using the log-fold changes to classify the interaction classes, one might think that these interactions are actually closer to being non-interactions than anything else. At any rate, they will be labeled as anomalies and can be classified with a k-nearest neighbors (or possibly other clustering) model.
 
 The final decision tree was visualized with the diagram below:
 
-
-
+##### Decision Tree for Interaction Mode Classification
               Outcome Vector
                    /\
                   /  \
@@ -115,8 +121,8 @@ The final decision tree was visualized with the diagram below:
              /        \           /        \
           Positive    UC     Negative      UC
             Mode                  Mode
-##### Decision Tree for Interaction Mode Classification
 
+Note: UC represents unclassified interactions.
 
 `classifyByThOutcomeVector` accepts two arguments, `ov_logfc` and `pipeline`. `ov_logfc` is a vector where the integers 1:6 are the elements of the coded outcome vector, and the doubles 7:n are the log fold-changes associated with the vector. `pipeline` is a character vector of length 1 that explicitly states what pipeline is being used for classification (`"limma"`, `"edgeR"`).
 ```{r, eval=FALSE}

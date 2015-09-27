@@ -1,0 +1,99 @@
+---
+title: "README"
+author: "Justin Taylor"
+date: "09/25/2015"
+output: 
+  html_document:
+    theme: "united"
+---
+
+# interactions
+*interactions* is a R package for classifying interaction effects from combinatorial stimuli with gene expression data. This package primarily utilizes functions in *limma* and *edgeR* to implement the theoretical framework and classification algorithm discussed in *Combinatorial code governing cellular response to complex stimuli* (Cappuccio et. al). Sets of gene expression profiles can be classified into well-characterized, mathematically defined definitions, potentially offering a more detailed snapshot of the transcriptional responses to combinations of stimuli.
+
+## Getting started
+
+Installing from GitHub:
+```{r, eval = FALSE}
+# install.packages(devtools)
+library(devtools)
+devtools::install_github("taylo5jm/interactions")
+library(interactions)
+```
+
+Installing from source:
+```{r, eval = FALSE}
+install.packages("path/to/interactions.tar.gz", repos = NULL)
+library(interactions)
+```
+
+Note, this README highlights the usage of the main functions in *interactions*. We will tend to avoid discussing details related to the statistics in this document, but it is highly encouraged that one reads the [background information]() before interpreting results output with *interactions*. 
+
+Suppose we have a set of gene expression outputs for 4 conditions:
+
+1) Control
+2) Signal X
+3) Signal Y
+4) Signal X + Y
+
+We might be interested in predicting the interaction effects between X and Y, where X and Y could be represent conditions such as drug, sex, etc.
+
+### Input 
+First, we will need to assemble three objects:
+
+1) `counts`
+2) `genes`
+3) `metadata`
+
+`counts` is a matrix where each row represents a gene and each column represents a library. Libraries for all 4 conditions should be present in this matrix.
+
+`genes` is a data.frame where each row represents a gene and each column represents a variable. For the moment, *interactions* might need a column named *hg19_gene_id* with the respective gene ID.
+
+`metadata` is another data.frame where each row represents a library and each column represents a variable. We will discuss what information should be provided. `treatment_name` should be the name of the condition. For example, a library that is part of the control group might be called "None".
+
+Please return to this section, as this will change in the near future.
+
+#### Design
+The design of the classification algorithm is an optional parameter at the time of this writing. If `design` is not provided, *interactions* will try to construct a design matrix from the `metadata` data.frame. 
+
+In this case, four conditions would map to the first four columns of a design matrix. The columns following the fourth represent donors (e.g. the linear model is attempting to account for biological variation between donors), and is a function of the number of libraries provided.
+
+If you do not pass your own design matrix to the functions discussed below, always check the design matrix constructed by *interactions*.
+
+To provide your own design matrix, the number of columns should be equal to 4 (unique conditions) + *n unique libraries* - 1. The number of rows should be equal to the number of libraries in the counts matrix and metadata. For more help, see the help page for `stats::model.matrix` or the [Limma Users Guide](http://www.bioconductor.org/packages/release/bioc/vignettes/limma/inst/doc/usersguide.pdf).
+
+### Interaction Mode Classification
+To classify interaction modes with *interactions*, we use `edgeRModeClassifier`.
+
+```{r, eval = FALSE}
+interaction_modes <- edgeRModeClassifier(counts, genes, metadata, design, alpha = 0.01)
+```
+
+A set of gene expression outputs for 4 conditions (interaction profile) can be represented as a 6-d outcome vector, where the values are $-1$, $0$, or $1$ depending on the results of pairwise comparisons between the mean outputs. For more information on outcome vectors, see the help page [Th Outcome].
+
+Alpha can be adjusted for a change in the frequency of type I and type II errors.
+
+#### Output
+`edgeRModeClassifier` returns a list of notable objects. `interaction.tbl` is a data.frame where each row is a gene that was classified into a non-additive interaction mode. This table has fold changes.
+
+`voom` and `DGEList` are the data with precision weights and normalized data estimated by the limma `voom` and edgeR negative binomial, models respectively. `modes` is a factor vector where each element maps to a row in one of the `voom` or `DGEList` objects.
+
+### Gene Set Enrichment
+Once interaction modes can be classified, we could consider the genes classified into a particular mode as our gene set of interest (rows in `interaction.tbl` with our classified mode(s)) and all of the genes expressed (rows in `DGEList` or `voom`) as our universe. We find that some GO terms are enriched when we consider a set of genes classified into a particular interaction mode.
+
+To run a *topGO* gene set enrichment analysis with Fisher's Exact Test, we pass a `DGEList` and `interaction.tbl` to `getGOTable`. We also tell the function what ontology and what mode we are interested in.
+
+```{r, eval=FALSE}
+go_data <- getGOTable(DGEList, interaction.tbl, ontology = "MF", filter.mode = "Pos.Syn")
+# molecular function for Positive synergy
+```
+
+If we are interested in retrieving data for all modes for each ontology (*MF*, *BP*, and *CC*), we can use `getGOTermsForAllModes`
+
+```{r, eval = FALSE}
+all_go_data <- getGOTermsForAllModes(DGEList, interaction.tbl)
+```
+
+```{r}
+sessionInfo()
+```
+

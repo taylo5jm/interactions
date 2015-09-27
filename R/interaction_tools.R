@@ -114,46 +114,24 @@ getLogFC <- function(interaction_top_tables) {
   logfc_matrix
 }
 
-
-# get confidence intervals from excised top tables -----------------------
-# output = ci_matrix of confidence intervals, where
-#           ncol(ci_matrix) = 8, in the order:
-# [Signal1.LowerBound] [Signal1.UpperBound] , ..., [Signal2.UpperBound]
-getLimmaCI <- function(interaction_top_tables, return.matrix = FALSE) {
-  ci_l <- lapply(interaction_top_tables, function(x) (x$CI.L))
-  ci_r <- lapply(interaction_top_tables, function(x) (x$CI.R))
-
-
-  if (return.matrix == TRUE) {
-    ci_matrix <- cbind(ci_l[[1]], ci_r[[1]], ci_l[[2]], ci_r[[2]],
-                       ci_l[[3]], ci_r[[3]], ci_l[[4]], ci_r[[4]])
-    colnames(ci_matrix) <- c("0.CI.L", "0.CI.R", "X.CI.L", "X.CI.R", "Y.CI.L",
-                             "Y.CI.R", "XY.C+I.L", "X+Y.CI.R")
-    return(ci_matrix)
-  }
-
-  if (return.matrix == FALSE) {
-    return(list(mapply(cbind, ci_l), mapply(cbind, ci_r)))
-  }
-
-}
-
-
-#' Generate table with genes classified into a mathematically defined interaction mode
+#' Generate table with genes classified into a mathematically defined 
+#' interaction mode
 #'
-#' @param v EList constructed with \code{voom}
-#' @param modes Character vector of length n indicating interaction modes of genes
-#' @param log.fcs Numeric matrix of log fold changes generated from the limma or edgeR pipelines
-#' @param classes Character vector of interaction classes for n genes. If missing, getIntClass()
-#' is called to assign interaction classes to each interaction mode.
-#' @param exclude.null.vector Boolean TRUE when genes with the null outcome vector
-#' (0, 0, 0, 0, 0, 0) should be excluded from the table.
-#' @param exclusivity.vectors Boolean FALSE when exclusivity vectors should be excluded
-#' from the table.
-#' @return \code{data.frame} with outcome vectors, interaction classes & modes, fold changes
-#' for all genes classified into an interaction class
+#' @param v EList constructed with \code{limma::voom}
+#' @param modes Character vector of length n indicating interaction modes of 
+#'  genes
+#' @param log.fcs Numeric matrix of log fold changes generated from the limma
+#'   or edgeR pipelines
+#' @param classes Character vector of interaction classes for n genes. If 
+#'  missing, getIntClass() is called to assign interaction classes to each
+#'  interaction mode.
+#' @param exclude.null.vector Boolean TRUE when genes with the null outcome 
+#'  vector (0, 0, 0, 0, 0, 0) should be excluded from the table.
+#' @param exclusivity.vectors Boolean FALSE when exclusivity vectors should be
+#'  excluded from the table.
+#' @return \code{data.frame} with outcome vectors, interaction classes & modes,
+#'  fold changes for all genes classified into an interaction class
 #' @export interactionGeneTable
-
 
 interactionGeneTable <- function(v, modes, log.fcs, pw_s, classes,
                                  exclude.null.vector = TRUE,
@@ -164,7 +142,7 @@ interactionGeneTable <- function(v, modes, log.fcs, pw_s, classes,
       modes != "NI" & modes != "A" & modes != "UC")])
   }
 
-  # map from modes to outcome vectors, classess, etc.
+  # map from modes to outcome vectors, classes, etc.
   getInteractionIndices <- function(modes, exclude.null.vector = TRUE,
                                     exclusivity.vectors = FALSE) {
     if (exclude.null.vector == TRUE & exclusivity.vectors == TRUE) {
@@ -185,9 +163,10 @@ interactionGeneTable <- function(v, modes, log.fcs, pw_s, classes,
     log.fcs <- log.fcs[interactions,]
   }
 
-  # initialize data.frame
+  # initial data.frame
   int_genes <- data.frame(v$genes[interactions,], classes, modes[interactions],
                           pw_s[interactions], log.fcs)
+  
   # return empty df if data.frame does not fit dimensions for
   # edgeR and limma pipelines
   if (ncol(int_genes) != 14 & ncol(int_genes) != 12) {
@@ -271,70 +250,6 @@ sharedGenesTable <- function(edgeR_interaction_tbl, limma_interaction_tbl) {
   return(master_interaction_tbl)
 }
 
-#' Report number of genes classified into a non-null or non-anomalous interaction mode
-#'
-#' @param modes character vector of length n indicating the interaction modes classified
-#' by a particular pipeline
-#' @return number of genes classified into a non-null and non-anomalous interaction mode
-#' @examples
-#' \dontrun{
-#' reportnInteractions(limma_modes)
-#' }
-#'
-# Print statistics to console -------------------------------------------------
-reportnInteractions <- function(modes) {
-  print(paste0(length(which(modes != "A" &
-                              modes != "NI")),
-               " interactions were classified with confidence intervals
-generated with limma."))
-}
-
-#' Report number of genes classified into an anomalous mode classifcation
-#'
-#' @param modes character vector of length n indicating the interaction mode classifications
-#' of each gene in v$genes
-#' @return number of genes coded into anomalous outcome vectors
-#' @examples
-#' \dontrun{
-#' reportNAnomaly(edgeR_modes)
-#' }
-reportnAnomaly <- function(modes) {
-  print(paste0(length(which(modes == "A")), " genes exhibited
-               anomalous outcome vectors. These outcome vectors may have been able
-               to be classified into an interaction class, but the outcome
-               vectors are not included in the 75 unique vectors enumerated."))
-}
-
-#' Report number of null interaction vectors coded
-#'
-#' @param character vector of length n indicating the interaction mode classifications
-#' of each gene in v$genes
-#' @return number of null outcome vectors (0, 0, 0, 0, 0, 0) coded
-#' @examples
-#' \dontrun{
-#' reportnNI(limma_modes)
-#' }
-reportnNI <- function(modes) {
-  print(paste0(length(which(modes == "NI")), " genes were consistent
-               with a non-interaction. Genes are classified as non-interactions
-               if their class inequality confidence interval contains 0, or if
-               the pairwise comparison outcome vector is known to exhibit no
-               interactive effects"))
-}
-
-#' Print statistics about the interaction mode distribution and return a frequency distribution
-#' table of interaction mode classifications
-#'
-#' @param modes character vector of length n indicating the interaction modes for each gene
-#' @return table of
-reportModeClassStats <- function(modes) {
-  reportnInteractions(modes)
-  reportnAnomaly(modes)
-  reportnNI(modes)
-  print(table(modes))
-  return(table(modes))
-}
-
 ### Interaction Mode Classification -------------------------------------------
 
 #' Check to see if an outcome vector is consistent with a "non-interaction" mode
@@ -389,7 +304,7 @@ massageCounts <- function(dge, cpm_min=2, sample_min=5) {
   return(dge)
 }
 
-#' generate frequency distribution table for outcome vectors
+#' Generate frequency distribution table for outcome vectors
 #'
 #' @param pw_s Character vector of length n with pairwise comparison outcome vectors
 #' if pw_s is a matrix, then each row will be coerced to a character vector of
@@ -414,18 +329,6 @@ ovTable <- function(pw_s, get.class = FALSE) {
   }
 }
 
-
-summarizeOVTable <- function(ov.table, var) {
-  vars <- unique(ov.table$var)
-  ov_sum_table <- data.frame()
-  for (i in 1:length(vars)) {
-    this_tbl <- filter(ov.table, Class == var)
-  }
-}
-
-
-
-
 #' Generate interaction table with genes classified into mathematically defined modes by both limma and edgeR
 #'
 #' @param edgeR_interaction_tbl interaction table with data generated with edgeR
@@ -446,10 +349,12 @@ poolInteractionGenes <- function(edgeR_interaction_tbl, limma_interaction_tbl) {
 
 #' Generate table with outcome vectors, interaction classes & modes for all genes
 #'
-#' @param outcome.vectors matrix where nrow(matrix) == n or character vector of length = n indicating outcome vectors
+#' @param outcome.vectors matrix where nrow(matrix) == n or character vector of
+#'  length = n indicating outcome vectors
 #' @param modes character vector of length n indicating interaction modes
 #' @param classes character vector of length n indicating interaction classes
-#' @return data.frame with outcome vectors, interaction modes, and classes for each gene
+#' @return data.frame with outcome vectors, interaction modes, and classes for 
+#'   each gene
 #' @export interactionDistTable
 interactionDistTable <- function(outcome.vectors, modes, classes) {
   if (is.matrix(outcome.vectors)) {
@@ -468,7 +373,7 @@ summarizeDistTable <- function(interaction.dist.table) {
 #' implemented in classifyByThOutcomeVector()
 #'
 #' @return MODES character vector of interaction mode classifications. See
-#' the vignettes on the implementation of mode classification.
+#'  the vignettes on the implementation of mode classification.
 #' @export allModes
 #' @examples
 #' MODES <- allModes()
@@ -479,23 +384,5 @@ allModes <- function() {
               "Sym.Right", "Sym.Left", "Step.Up", "Step.Down", "NI", "A", "UC")
   return(MODES)
 }
-
-
-#' @export metadataTable
-metadataTable <- function(counts, genes, metadata, alpha, drug.combo) {
-  return(list(
-    counts = counts,
-    genes = genes,
-    metadata = metadata,
-    alpha = alpha,
-    drug.combo = drug.combo))
-  }
-
-
-
-
-
-
-
 
 

@@ -1,5 +1,11 @@
-Sample Workflows: Interaction Mode Classification with limma and edgeR
-====================================================================
+---
+title: "Interaction Mode Classification with limma and edgeR"
+author: "Justin Taylor"
+date: 9/12/2015
+output:
+  html_document:
+    theme: united
+---
 This report describes the steps involved in classifying genes into a mathematically and biologically defined interaction mode and class using the `limma` and `edgeR` pipelines. Please refer to function documentation for more information about a function defined or called in this report, as the documentation may contain details about a function that are omitted here for conceptual clarity.
 
 ## Retrieve Metadata
@@ -359,7 +365,6 @@ codeOVElement <- function(condition1, condition2) {
 }
 ```
 
-VERY VERY WEAK POINT
 Now that we have our pairwise comparison outcome vectors, we create a matrix where the first 6 columns represent the outcome vectors and columns 7:10 represent the fold changes for each condition
 ```{r, eval=FALSE}
 fold_changes <- cbind(top_tables[[2]]$logFC, top_tables[[3]]$logFC,
@@ -370,7 +375,7 @@ fold_changes <- cbind(top_tables[[2]]$logFC, top_tables[[3]]$logFC,
 
 
 #### Interaction Mode Classification & Summary
-WEAK POINT HACKY CODE
+
 We can then classify each gene into an interaction class and mode. Finally, we create an a summary table with all genes that were classified into a non-null outcome vector.
 ```{r, eval=FALSE}
 limma_modes <- apply(limma_outcome_vectors, 1, classifyByThOutcomeVector, "limma") %>%
@@ -527,17 +532,5 @@ null_edgeR <- edgeRModeClassifier(counts, genes, metadata, null = TRUE,
                                   DRUG_COMBINATION = TRUE,
                                   alpha = 0.01)
 ```
-
-```{r}
-
-```
-
-#### Gene Ontology
-These objects are actually saved in the /data folder of this package, so we can continue with the analysis by using `base::data()` to load the R objects into RAM.
-```{r}
-data(sit_met_edgeR)
-data(null_edgeR)
-```
-
 
 

@@ -55,28 +55,27 @@ codeLimmaOutcomeVectors <- function(eb, design) {
   return(limma_outcome_vectors)
 }
 
-#' Interaction mode classification with matrix of outcome vectors and log fold changes
+
+#' Code elements of pairwise outcome vectors with confidence intervals from limma
 #'
-#' @param res matrix where columns 1:6 are the elements of the outcome vectors and columns
-#' 7:length(res) are the log fold changes for interaction class classification
-#' @param pipeline character vector of length n = 1 indicating pipeline to use for
-#' interaction mode classification ("edgeR" or "limma")
-#' @return character vector of length m = nrow(res) indicating interaction modees
-#' @export modeClassification
-#' @examples
-#' \dontrun{
-#' library(limma)
-#' ov <- codeLimmaOutcomeVectors(eb, design)
-#' limma_modes <- modeClassification(ov, pipeline = "limma")
-#' }
+#' @param condition1 matrix where conditions 1:3 are the log fold changes
+#' @param condition2 ""
+#' @return numeric vector of length n where each element represents the outcome of the ith
+#' pairwise comparison
+#' @export codeOVElement
 
-modeClassification <- function(res, pipeline) {
-  if (pipeline == "edgeR") {
-    modes <- classifyByThOutcomeVector(res, "edgeR")
+codeOVElement <- function(condition1, condition2) {
+  con <- cbind(condition1, condition2)
+  assignOutcome <- function(v) {
+    if (v[1] > v[5] & v[1] < v[6] & v[4] > v[2] & v[4] < v[3]) {
+      return(0)
+    }
+    if (v[1] < v[5] & v[4] > v[3]) {
+      return(-1)
+    }
+    else {
+      return(1)
+    }
   }
-  if (pipeline == "limma") {
-    modes <- classifyByThOutcomeVector(res, "limma")
-  }
-  return(modes)
+  apply(con, 1, assignOutcome)
 }
-

@@ -1,20 +1,25 @@
-Anomaly Classification with k-nearest neighbours
-========================================================
+---
+title: "Anomaly Classification with k-nearest neighbours"
+author: Justin Taylor
+output:
+  html_document:
+    theme: "united"
+---
 
 Some genes may be coded as an outcome vector that was not enumerated as one of the 75 theoretical outcome vectors. Recall there are 256 possible permutations with repetition when there are n = 4 conditions and k = (1, 2, 3, 4) possible ranks. We would expect to see only a subset of these n-tuples when classifying a matrix of counts, since some n-tuples would not be meaningful in terms of biology in our current framework.
 
 This subset, however, can often have a greater number of outcome vectors than the number of outcome vectors that were enumerated with the closed-form recurrence relation solution and [maybe another example]. Outcome vectors that were coded but do not match an outcome vector in the 75 enumerated, as anomalous outcome vectors.
 
-The authors of "combinatorial code governing cellular response to complex stimuli" coded outcome vectors with confidence intervals (see [LINK TO LIMMA PAGE]). If the profile could not be matched to a theoretically enumerated outcome vector due to "statistical inconsistencies", the nearest-neighbour algorithm with correlation distance was used to classify these anomalies. It is later mentioned, however, that the MATLAB function *knnclassify* was used to classify the profile into an interaction mode with k-nearest neighbors.
+The authors of "Combinatorial code governing cellular response to complex stimuli" coded outcome vectors with confidence intervals. If the profile could not be matched to a theoretically enumerated outcome vector due to "statistical inconsistencies", the nearest-neighbour algorithm with correlation distance was used to classify these anomalies. It is later mentioned that the MATLAB function *knnclassify* was used to classify the profile into an interaction mode with k-nearest neighbors.
 
-We will use the knn classifier function in caret to train a model, so that some of these anomalous outcome vectors can be classified into an interaction mode.
+We will use the knn classifier function in `caret` to train a model, so that some of these anomalous outcome vectors can be classified into an interaction mode.
 
 
 ## Principal Component Analysis
 
 We will use principal component analysis (*stats::princomp*) to convert our variables of interest to principal components. In this application, our possibly correlated variables are log fold changes for contrasts. `pooled_lfc` is a matrix where each row represents a gene and each column represents a condition or contrast. This variable is named `pooled_lfc`, because ideally we would have a large matrix of fold-changes generated from *multiple* signal combinations, not just our signal combination of interest.
 
-```{r, eval = FALSE}
+```{r, eval = FALSE, cache = TRUE}
 getPCAScores <- function(pooled_lfc) {
   my_pca <- princomp(pooled_lfc)
   pca_scores <- my_pca$scores
@@ -55,10 +60,10 @@ pcaScatterMatrix(this_modes, this_pca_scores)
 ```
 
 ## Interaction Mode Classification with caret
-We see that most (if not all) [CHECK] of the interaction modes are separated from the rest by at least one principal componenent. Now, a model can be trained so that predictions can be made to classify anomalous pairwise comparison outcome vectors into defined interaction modes.
+We see that most of the interaction modes are separated from the rest by at least one principal componenent. Now, a model can be trained so that predictions can be made to classify anomalous pairwise comparison outcome vectors into defined interaction modes.
 
 ### Partition Data into Training and Testing Sets
-The data is partitioned into two subsets, a training and test set, both of which include PCA scores and interaction modes. Our training set will be used to teach the model how to classify feature vectors into known interaction modes. Our test set will be used to evaluate the models performance, since we know the true classifications for the test set.
+The data is partitioned into two subsets, a training and test set, both of which include PCA scores and interaction modes. Our training set will be used to teach the model how to classify feature vectors into known interaction modes. Our test set will be used to evaluate the model's performance, since we know the true classifications for the test set.
 
 ```{r, eval = FALSE}
 library(caret)

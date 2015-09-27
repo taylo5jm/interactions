@@ -1,5 +1,11 @@
-Enumeration of Theoretical Outcome Vectors
-====================================================
+---
+title: "Enumeration of Theoretical Outcome Vectors"
+author: "Justin Taylor"
+date: 9/12/2015
+output:
+  html_document:
+    theme: united
+---
 
 ```{r, echo = FALSE,message=FALSE, warning=FALSE}
 suppressPackageStartupMessages(library(magrittr))
@@ -45,7 +51,7 @@ stringCoerce <- function(v) {
       paste(collapse = ",", sep = " ") %>%
       return()
 }
-source('~/Users/taylor/sitt/sitt/R/interaction_tools.R')
+
 interactionDistTable <- function(outcome.vectors, modes, classes) {
   if (is.matrix(outcome.vectors)) {
     outcome.vectors <- apply(outcome.vectors, 1, stringCoerce)
@@ -209,7 +215,7 @@ enumerateThOutcomeVectors <- function() {
 pwt_n <- enumerateThOutcomeVectors()
 ```
 
-```{r, fig.align = 'center', fig.width = 10, fig.height = 10, cache = TRUE}
+```{r, fig.align = 'center', fig.width = 10, fig.height = 10, cache = TRUE, echo = FALSE, eval = FALSE}
 pheatmap(pwt_n, color = c("#000099", "#FFFFFF", "#990000"), cluster_rows = FALSE, cluster_cols = FALSE)
 ```
 
@@ -221,7 +227,7 @@ pwt_n
 ```
 
 This result is also supported by an implementation of the closed-form recurrence relation solution found in "CITE ME" and implemented by Dr. Stephen Hoang. In this implementation, the recurrence relation solution is used to compute the number of possible vectors when there are n = 4 conditions and k = (1, 2, 3, 4)
-```{r, cache=TRUE}
+```{r, cache = TRUE}
 # Stephen Hoang
 A <- function(n, k) {
   if (n < 1 | k < 1) {
@@ -270,7 +276,7 @@ outcome_vector_tbl <- lapply(outcome_vectors, ovTable, get.class = FALSE)
 ```
 
 
-```{r}
+```{r, cache= TRUE}
 o <- outcome_vector_tbl
 sum_table <- data.frame(o[[1]]$Outcome.Vector, o[[1]]$Freq, o[[2]]$Freq, o[[3]]$Freq,
                         o[[1]]$Log.Freq, o[[2]]$Log.Freq, o[[3]]$Log.Freq,
@@ -286,7 +292,7 @@ sum_table[,5:10] <- signif(sum_table[,5:10], digits = 3)
 sum_table
 ```
 
-```{r, echo=FALSE, fig.cap = "Frequency distributions of outcome vectors coded from Uniform, Normal, and Poisson distribution pseudorandom matrices.", fig.width = 12, fig.height = 20, fig.align = 'center'}
+```{r, echo=FALSE, fig.cap = "Frequency distributions of outcome vectors coded from Uniform, Normal, and Poisson distribution pseudorandom matrices.", fig.width = 12, fig.height = 20, fig.align = 'center', cache = TRUE}
 library(ggplot2)
 library(dplyr)
 p1 <- qplot(x = 1:nrow(outcome_vector_tbl[[1]]), y = Freq, data = outcome_vector_tbl[[1]],
@@ -325,7 +331,7 @@ multiplot(p1, p2, p3, p4, p5, p6, cols = 1)
 ## Null Distribution: Class
 
 We then implement a function to classify an interaction by an interaction class.
-```{r}
+```{r, cache = TRUE}
 classifyByClass <- function(v) {
   class_classifier <- function(v) {
     e0 <- v[1]
@@ -355,8 +361,8 @@ rlist_classes <- lapply(rlist, classifyByClass)
 class_tbl <- lapply(rlist_classes, ovTable, get.class = FALSE)
 ```
 
-PLOT CLASS DISTRIBUTION HERE
-```{r, fig.width = 12, fig.height = 15, fig.align = 'center'}
+
+```{r, fig.width = 12, fig.height = 15, fig.align = 'center', cache = TRUE}
 p1 <- qplot(x = 1:nrow(class_tbl[[1]]), y = Freq, data = class_tbl[[1]],
            geom = "bar", stat = "identity", xlab = "Outcome Vector", ylab = "Frequency",
            main = "Frequency Distribution of Interaction Modes") + scale_x_discrete(breaks = 1:10)
@@ -440,12 +446,8 @@ classifyByMode <- function(v) {
 }
 ```
 
-```{r}
+```{r, cache = TRUE}
 rclasses <- lapply(rlist, classifyByMode)
-```
-
-```{r}
-# PLOT MODES DISTRIBUTION
 ```
 
 ```{r}

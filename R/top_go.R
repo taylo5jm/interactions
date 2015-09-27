@@ -15,6 +15,7 @@
 #' this_gene_vector <- getGeneVector(data$dgelist$genes, edgeR_interaction.tbl,
 #' filter.mode = "High.Stab")
 #' }
+#' 
 getGeneVector <- function(genes, interaction.tbl, filter.mode = FALSE) {
   
     # all DEGs or just genes with Mode matching filter.mode 
